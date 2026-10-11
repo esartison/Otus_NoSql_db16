@@ -276,7 +276,12 @@ CONTAINER ID   IMAGE           COMMAND             CREATED              STATUS  
 
 Создать коллекцию
 ```
-
+>> client.create_collection(
+...     collection_name='bank_support',
+...     vectors_config=models.VectorParams(
+...         size=384, distance=models.Distance.COSINE),
+... )
+True
 ```
 
 
@@ -453,6 +458,67 @@ box.space.flight_searches:insert({
 
 
 ## (6) Загрузить данные в Qdrant. ##
+{"id": 1, "title": "Ошибка CRM", text": "Система оформления кредитных заявок закрывается после открытия карточки клиента", "department": "credit","category": "crm"}
+{"id": 2, "title": "Не печатается документ", "text": "После отправки договора на печать устройство не отвечает", "department": "operations", "category": "printing"}
+{"id": 3, "title": "Ошибка входа", "text": "Сотрудник не может войти в систему обработки платежей", "department": "finance", "category": "authentication"}
+{"id": 4, "title": "Проблема Outlook", "text": "Письма остаются в исходящих и не отправляются получателям", "department": "office", "category": "mail"}
+{"id": 5, "title": "Сбой документооборота", "text": "Система электронного согласования зависает при открытии вложений", "department": "legal","category": "edms"}
+{"id": 6, "title": "Ошибка клиентского приложения", "text": "Приложение для оформления банковских продуктов аварийно завершается после авторизации", "department": "credit", "category": "crm"}
+
+
+from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, VectorParams, PointStruct
+from sentence_transformers import SentenceTransformer
+
+# 1. Initialize Qdrant Client (Using an in-memory instance for testing)
+client = QdrantClient(url='http://localhost:6333') 
+
+# 2. Initialize your embedding model
+model = SentenceTransformer('all-MiniLM-L6-v2')
+vector_size = model.get_sentence_embedding_dimension()
+
+# 3. Create a collection (with corresponding vector sizing)
+collection_name = "my_documents"
+client.create_collection(
+    collection_name=collection_name,
+    vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE),
+)
+
+# 4. Define your raw documents and metadata
+raw_documents = [
+    {"id": 1, "text": "Qdrant is a high-performance vector database.", "category": "tech"},
+    {"id": 2, "text": "Python is a popular programming language for AI.", "category": "coding"},
+]
+
+# 5. Convert documents to vectors and wrap them into PointStruct objects
+points = []
+for doc in raw_documents:
+    # Generate the vector embedding for the text content
+    embedding = model.encode(doc["text"]).tolist()
+    
+    # Construct the point
+    point = PointStruct(
+        id=doc["id"],
+        vector=embedding,
+        payload={
+            "text": doc["text"],        # Store the original text inside the payload
+            "category": doc["category"]   # Add any metadata fields
+        }
+    )
+    points.append(point)
+
+# 6. Load the points into Qdrant using client.upsert
+operation_info = client.upsert(
+    collection_name=collection_name,
+    wait=True,
+    points=points
+)
+
+print(f"Upsert status: {operation_info.status}")
+
+
+
+
 
 Необходимо выполнить поиск для следующих запросов:
 
