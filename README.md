@@ -91,83 +91,54 @@ category тип проблемы
 
 
 Обращение 3
-
 {
-
 "id": 3,
-
 "title": "Ошибка входа",
-
 "text": "Сотрудник не может войти в
 систему обработки платежей",
-
 "department": "finance",
-
 "category": "authentication"
-
 }
 
 
 Обращение 4
-
 {
-
 "id": 4,
-
 "title": "Проблема Outlook",
-
 "text": "Письма остаются в исходящих и не
 отправляются получателям",
-
 "department": "office",
-
 "category": "mail"
-
 }
 
 
 Обращение 5
-
 {
-
 "id": 5,
-
 "title": "Сбой документооборота",
-
 "text": "Система электронного
 согласования зависает при открытии
 вложений",
-
 "department": "legal",
-
 "category": "edms"
-
 }
 
 
 Обращение 6
-
 {
 "id": 6,
-
 "title": "Ошибка клиентского приложения",
-
 "text": "Приложение для оформления
 банковских продуктов аварийно
 завершается после авторизации",
-
 "department": "credit",
-
 "category": "crm"
-
 }
 
 
 Задание
 
-
 Необходимо:
-
 
 (1) Установить Qdrant.
 
@@ -353,123 +324,60 @@ collections=[CollectionDescription(name='test_collection')]
 ```
 
 ## (4) Выбрать embedding-модель. ##
-Создаем вторичный индекс по полям departure_date, airline и departure_city
+Выбираю embedding-модель all-MiniLM-L6-v2 и при первом обращении она скачивается
 ```
-flight_searches:create_index('date_airline_city', {
-    type = 'TREE',
-    parts = {
-        {'departure_date'},
-        {'airline'},
-        {'departure_city'}
-    },
-    if_not_exists = true
-})
+>>> from qdrant_client import QdrantClient
+>>> from qdrant_client.models import Distance, VectorParams, PointStruct
+>>> from sentence_transformers import SentenceTransformer
+>>> 
+>>> client = QdrantClient(url='http://localhost:6333') 
+>>> 
+>>> model = SentenceTransformer('all-MiniLM-L6-v2')
+
+modules.json: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 349/349 [00:00<00:00, 1.17MB/s]
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+config_sentence_transformers.json: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 116/116 [00:00<00:00, 382kB/s]
+README.md: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 10.5k/10.5k [00:00<00:00, 27.6MB/s]
+sentence_bert_config.json: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 53.0/53.0 [00:00<00:00, 204kB/s]
+config.json: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 612/612 [00:00<00:00, 1.80MB/s]
+model.safetensors: downloading bytes: ███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 85.0MB, 5.02MB/s  
+model.safetensors: reconstructing file: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 90.9MB / 90.9MB, 7.29MB/s  
+Loading weights: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 103/103 [00:00<00:00, 6508.58it/s]
+tokenizer_config.json: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 350/350 [00:00<00:00, 1.73MB/s]
+vocab.txt: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 232k/232k [00:00<00:00, 2.13MB/s]
+tokenizer.json: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 466k/466k [00:00<00:00, 4.32MB/s]
+special_tokens_map.json: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 112/112 [00:00<00:00, 122kB/s]
+config.json: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 190/190 [00:00<00:00, 325kB/s]
+>>> vector_size = model.get_sentence_embedding_dimension()
+<stdin>:1: FutureWarning: The `get_sentence_embedding_dimension` method has been renamed to `get_embedding_dimension`.
 ```
 
 
 ## (5) Построить embeddings для всех обращений. ##
 
 ```
-box.space.flight_searches:insert({
-    1, 
-    'Aeroflot', 
-    '2026-10-15', 
-    'Moscow', 
-    'Rostov-on-Don', 
-    5500.50
-})
-
-box.space.flight_searches:insert({
-    2, 
-    'Aeroflot', 
-    '2026-10-15', 
-    'Moscow', 
-    'Samara', 
-    5900.50
-})
-
-box.space.flight_searches:insert({
-    3, 
-    'Aeroflot', 
-    '2026-10-15', 
-    'Moscow', 
-    'Saratov', 
-    5000.50
-})
-
-box.space.flight_searches:insert({
-    4, 
-    'Aeroflot', 
-    '2026-10-15', 
-    'Moscow', 
-    'Kazan', 
-    7500.50
-})
-
-box.space.flight_searches:insert({
-    5, 
-    'Aeroflot', 
-    '2026-10-15', 
-    'Moscow', 
-    'Tula', 
-    2000.50
-})
-
-box.space.flight_searches:insert({
-    6, 
-    'Aeroflot', 
-    '2026-10-15', 
-    'Moscow', 
-    'Tver', 
-    1500.50
-})
-
-
-box.space.flight_searches:insert({
-    7, 
-    'Aeroflot', 
-    '2027-01-01', 
-    'Moscow', 
-    'Perm', 
-    1500.50
-})
-```
-
-
-## (6) Загрузить данные в Qdrant. ##
-{"id": 1, "title": "Ошибка CRM", text": "Система оформления кредитных заявок закрывается после открытия карточки клиента", "department": "credit","category": "crm"}
-{"id": 2, "title": "Не печатается документ", "text": "После отправки договора на печать устройство не отвечает", "department": "operations", "category": "printing"}
-{"id": 3, "title": "Ошибка входа", "text": "Сотрудник не может войти в систему обработки платежей", "department": "finance", "category": "authentication"}
-{"id": 4, "title": "Проблема Outlook", "text": "Письма остаются в исходящих и не отправляются получателям", "department": "office", "category": "mail"}
-{"id": 5, "title": "Сбой документооборота", "text": "Система электронного согласования зависает при открытии вложений", "department": "legal","category": "edms"}
-{"id": 6, "title": "Ошибка клиентского приложения", "text": "Приложение для оформления банковских продуктов аварийно завершается после авторизации", "department": "credit", "category": "crm"}
-
-
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
 from sentence_transformers import SentenceTransformer
 
-# 1. Initialize Qdrant Client (Using an in-memory instance for testing)
 client = QdrantClient(url='http://localhost:6333') 
 
-# 2. Initialize your embedding model
 model = SentenceTransformer('all-MiniLM-L6-v2')
 vector_size = model.get_sentence_embedding_dimension()
 
-# 3. Create a collection (with corresponding vector sizing)
-collection_name = "my_documents"
-client.create_collection(
-    collection_name=collection_name,
-    vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE),
-)
+collection_name = "bank_support"
+
 
 # 4. Define your raw documents and metadata
 raw_documents = [
-    {"id": 1, "text": "Qdrant is a high-performance vector database.", "category": "tech"},
-    {"id": 2, "text": "Python is a popular programming language for AI.", "category": "coding"},
+{"id": 1, "title": "Ошибка CRM", "text": "Система оформления кредитных заявок закрывается после открытия карточки клиента", "department": "credit","category": "crm"},
+{"id": 2, "title": "Не печатается документ", "text": "После отправки договора на печать устройство не отвечает", "department": "operations", "category": "printing"},
+{"id": 3, "title": "Ошибка входа", "text": "Сотрудник не может войти в систему обработки платежей", "department": "finance", "category": "authentication"},
+{"id": 4, "title": "Проблема Outlook", "text": "Письма остаются в исходящих и не отправляются получателям", "department": "office", "category": "mail"},
+{"id": 5, "title": "Сбой документооборота", "text": "Система электронного согласования зависает при открытии вложений", "department": "legal","category": "edms"},
+{"id": 6, "title": "Ошибка клиентского приложения", "text": "Приложение для оформления банковских продуктов аварийно завершается после авторизации", "department": "credit", "category": "crm"}
 ]
 
-# 5. Convert documents to vectors and wrap them into PointStruct objects
 points = []
 for doc in raw_documents:
     # Generate the vector embedding for the text content
@@ -485,8 +393,12 @@ for doc in raw_documents:
         }
     )
     points.append(point)
+```
 
-# 6. Load the points into Qdrant using client.upsert
+
+## (6) Загрузить данные в Qdrant. ##
+
+```
 operation_info = client.upsert(
     collection_name=collection_name,
     wait=True,
@@ -494,36 +406,142 @@ operation_info = client.upsert(
 )
 
 print(f"Upsert status: {operation_info.status}")
+Upsert status: completed
+```
+
+проверить данные в коллекции bank_support, все загрузилось
+```
+>>> points, next_page_offset = client.scroll(
+...     collection_name="bank_support",
+...     limit=10,  # Number of points to return
+...     with_payload=True,
+...     with_vectors=False,  # Set to True if you also want vector arrays
+... )
+>>> 
+>>> for point in points:
+...   print(point.id, point.payload)
+... 
+1 {'text': 'Система оформления кредитных заявок закрывается после открытия карточки клиента', 'category': 'crm'}
+2 {'text': 'После отправки договора на печать устройство не отвечает', 'category': 'printing'}
+3 {'text': 'Сотрудник не может войти в систему обработки платежей', 'category': 'authentication'}
+4 {'text': 'Письма остаются в исходящих и не отправляются получателям', 'category': 'mail'}
+5 {'text': 'Система электронного согласования зависает при открытии вложений', 'category': 'edms'}
+6 {'text': 'Приложение для оформления банковских продуктов аварийно завершается после авторизации', 'category': 'crm'}
+```
 
 
 
 
+## (7) Для каждого запроса необходимо сделать ##
 
 Необходимо выполнить поиск для следующих запросов:
 
 Запрос пользователя Ожидаемый результат
 
-«закрывается программа кредитов» обращения CRM
-
-«не отправляется электронная почта» проблемы Outlook
-
-«невозможно войти в платежную систему» authentication
-
-«зависает система согласования документов» EDMS
-
+# «закрывается программа кредитов» обращения CRM
 ```
 
-## (7) Для каждого запроса необходимо сделать ##
+q = model.encode(['query: закрывается программа кредитов'],
+                normalize_embeddings=True)[0]
 
+client.query_points(
+   collection_name='bank_support',
+     query=q.tolist(),
+     limit=5,
+)
+QueryResponse(points=[ScoredPoint(id=1, version=1, score=0.6310812, payload={'text': 'Система оформления кредитных заявок закрывается после открытия карточки клиента', 'category': 'crm'}, vector=None, shard_key=None, order_value=None),
+ScoredPoint(id=4, version=1, score=0.5867803, payload={'text': 'Письма остаются в исходящих и не отправляются получателям', 'category': 'mail'}, vector=None, shard_key=None, order_value=None),
+ScoredPoint(id=6, version=1, score=0.5767096, payload={'text': 'Приложение для оформления банковских продуктов аварийно завершается после авторизации', 'category': 'crm'}, vector=None, shard_key=None, order_value=None),
+ScoredPoint(id=5, version=1, score=0.5669989, payload={'text': 'Система электронного согласования зависает при открытии вложений', 'category': 'edms'}, vector=None, shard_key=None, order_value=None),
+ScoredPoint(id=2, version=1, score=0.5307403, payload={'text': 'После отправки договора на печать устройство не отвечает', 'category': 'printing'}, vector=None, shard_key=None, order_value=None)])
 
-
-Выписать найденные документы.
-
-Объяснить:
-
+```
 почему семантический поиск нашел нужный документ?
-
+- потому-что совпали слова закрывается и кредитов. Поиск отработал как надо. 
 какие слова отсутствовали в исходном тексте?
-
+- не было слова программа
 почему поиск по ключевым словам отработает хуже?
+- потому-что не все ключевые слова есть в тексте
+
+
+# «невозможно войти в платежную систему» authentication
 ```
+q = model.encode(['query: невозможно войти в платежную систему'],
+                normalize_embeddings=True)[0]
+
+client.query_points(
+     collection_name='bank_support',
+     query=q.tolist(),
+     limit=5,
+)
+
+QueryResponse(points=[ScoredPoint(id=3, version=1, score=0.74127036, payload={'text': 'Сотрудник не может войти в систему обработки платежей', 'category': 'authentication'}, vector=None, shard_key=None, order_value=None),
+ScoredPoint(id=4, version=1, score=0.5703194, payload={'text': 'Письма остаются в исходящих и не отправляются получателям', 'category': 'mail'}, vector=None, shard_key=None, order_value=None),
+ScoredPoint(id=5, version=1, score=0.5457332, payload={'text': 'Система электронного согласования зависает при открытии вложений', 'category': 'edms'}, vector=None, shard_key=None, order_value=None),
+ScoredPoint(id=2, version=1, score=0.5326968, payload={'text': 'После отправки договора на печать устройство не отвечает', 'category': 'printing'}, vector=None, shard_key=None, order_value=None),
+ ScoredPoint(id=6, version=1, score=0.47339642, payload={'text': 'Приложение для оформления банковских продуктов аварийно завершается после авторизации', 'category': 'crm'}, vector=None, shard_key=None, order_value=None)])
+```
+почему семантический поиск нашел нужный документ?
+- потому-что совпали слова  войти,платежную,систему. Поиск отработал как надо. 
+какие слова отсутствовали в исходном тексте?
+- не было слова невозможно
+почему поиск по ключевым словам отработает хуже?
+- потому-что не все ключевые слова есть в тексте
+
+
+
+
+# «зависает система согласования документов» EDMS
+
+```
+q = model.encode(['query: зависает система согласования документов'],
+                normalize_embeddings=True)[0]
+
+client.query_points(
+     collection_name='bank_support',
+     query=q.tolist(),
+     limit=5,
+)
+QueryResponse(points=[ScoredPoint(id=5, version=1, score=0.7246635, payload={'text': 'Система электронного согласования зависает при открытии вложений', 'category': 'edms'}, vector=None, shard_key=None, order_value=None),
+ScoredPoint(id=1, version=1, score=0.71989876, payload={'text': 'Система оформления кредитных заявок закрывается после открытия карточки клиента', 'category': 'crm'}, vector=None, shard_key=None, order_value=None),
+ScoredPoint(id=6, version=1, score=0.7076012, payload={'text': 'Приложение для оформления банковских продуктов аварийно завершается после авторизации', 'category': 'crm'}, vector=None, shard_key=None, order_value=None),
+ScoredPoint(id=2, version=1, score=0.56134963, payload={'text': 'После отправки договора на печать устройство не отвечает', 'category': 'printing'}, vector=None, shard_key=None, order_value=None),
+ScoredPoint(id=4, version=1, score=0.5231869, payload={'text': 'Письма остаются в исходящих и не отправляются получателям', 'category': 'mail'}, vector=None, shard_key=None, order_value=None)])
+
+```
+почему семантический поиск нашел нужный документ?
+- потому-что совпали слова  зависает, система, согласования. Поиск отработал как надо. 
+какие слова отсутствовали в исходном тексте?
+- не было слова документов
+почему поиск по ключевым словам отработает хуже?
+- потому-что не все ключевые слова есть в тексте
+
+
+# «не отправляется электронная почта» проблемы Outlook
+```
+q = model.encode(['query: не отправляется электронная почта'],
+                normalize_embeddings=True)[0]
+
+client.query_points(
+     collection_name='bank_support',
+     query=q.tolist(),
+     limit=5,
+)
+
+QueryResponse(points=[ScoredPoint(id=2, version=1, score=0.70173323, payload={'text': 'После отправки договора на печать устройство не отвечает', 'category': 'printing'}, vector=None, shard_key=None, order_value=None),
+ScoredPoint(id=4, version=1, score=0.6910798, payload={'text': 'Письма остаются в исходящих и не отправляются получателям', 'category': 'mail'}, vector=None, shard_key=None, order_value=None),
+ScoredPoint(id=3, version=1, score=0.5391722, payload={'text': 'Сотрудник не может войти в систему обработки платежей', 'category': 'authentication'}, vector=None, shard_key=None, order_value=None),
+ScoredPoint(id=5, version=1, score=0.51696676, payload={'text': 'Система электронного согласования зависает при открытии вложений', 'category': 'edms'}, vector=None, shard_key=None, order_value=None),
+ScoredPoint(id=1, version=1, score=0.49991882, payload={'text': 'Система оформления кредитных заявок закрывается после открытия карточки клиента', 'category': 'crm'}, vector=None, shard_key=None, order_value=None)])
+```
+почему семантический поиск нашел нужный документ?
+- Поиск НЕ отработал как надо. Нужный документ только на втором месте. Возможно связано с моделью эмбеддингов. 
+какие слова отсутствовали в исходном тексте?
+- не было слова электронная почта
+почему поиск по ключевым словам отработает хуже?
+- потому-что не все ключевые слова есть в тексте
+
+
+
+
+
